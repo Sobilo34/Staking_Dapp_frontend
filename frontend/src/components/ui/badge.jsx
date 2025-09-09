@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const Badge = React.forwardRef(({ className = '', variant = 'primary', children, ...props }, ref) => {
@@ -24,3 +25,4 @@ const Badge = React.forwardRef(({ className = '', variant = 'primary', children,
 Badge.displayName = 'Badge';
 
 export { Badge };
+
