@@ -41,7 +41,8 @@ export default function StakeModal({ isOpen, onClose, onSuccess }) {
       await approveTokens(amount);
       setIsApproved(true);
     } catch (err) {
-      setError(err.message || 'Approval failed');
+      // Error handled by useStaking hook with toast
+      console.error('Approval error:', err);
     }
   };
 
@@ -49,17 +50,7 @@ export default function StakeModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setError('');
 
-    if (!amount || parseFloat(amount) <= 0) {
-      setError('Please enter a valid amount');
-      return;
-    }
-
-    const balanceFormatted = formatTokenAmount(balance);
-    if (parseFloat(amount) > parseFloat(balanceFormatted)) {
-      setError('Insufficient balance');
-      return;
-    }
-
+    // Let the useStaking hook handle validation and show toasts
     try {
       const result = await stake(amount);
       if (result.success) {
@@ -68,7 +59,8 @@ export default function StakeModal({ isOpen, onClose, onSuccess }) {
         onClose();
       }
     } catch (err) {
-      setError(err.message || 'Failed to stake tokens');
+      // Error handled by useStaking hook with toast
+      console.error('Stake error:', err);
     }
   };
 

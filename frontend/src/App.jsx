@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ConnectButton from './components/ConnectButton';
 import StakingStats from './components/StakingStats';
 import StakingActions from './components/StakingActions';
+import { Toaster } from './components/ui/sonner';
 
 function App() {
   const { isConnected } = useAccount();
@@ -52,6 +53,9 @@ function App() {
         </div>
       </footer>
       </div>
+      
+      {/* Toast Container */}
+      <Toaster />
     </ErrorBoundary>
   );
 }

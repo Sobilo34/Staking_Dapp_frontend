@@ -23,25 +23,21 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
 
     try {
       if (!amount || parseFloat(amount) <= 0) {
-        setError('Please enter a valid amount');
-        return;
+        return; // Toast will be shown by useStaking hook
       }
 
       if (!userDetails) {
-        setError('Unable to load staking details. Please try again.');
-        return;
+        return; // Toast will be shown by useStaking hook
       }
 
       if (!userDetails.canWithdraw) {
-        setError('Tokens are still locked. Please wait for the lock period to end.');
-        return;
+        return; // Toast will be shown by useStaking hook
       }
 
       // Safe amount validation
       const stakedAmountStr = userDetails.stakedAmount ? formatTokenAmount(userDetails.stakedAmount) : '0';
       if (parseFloat(amount) > parseFloat(stakedAmountStr)) {
-        setError('Amount exceeds staked balance');
-        return;
+        return; // Toast will be shown by useStaking hook
       }
 
       const result = await withdraw(amount);
@@ -51,8 +47,8 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
         onClose();
       }
     } catch (err) {
+      // Error is handled by useStaking hook with toast
       console.error('Withdraw error:', err);
-      setError(err?.message || 'Failed to withdraw tokens. Please try again.');
     }
   };
 

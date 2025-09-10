@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppKit } from '@reown/appkit/react';
 import { useAccount } from 'wagmi';
+import { toast } from 'sonner';
 
 export default function ConnectButton() {
   const { open } = useAppKit();
   const { address, isConnecting, isConnected } = useAccount();
+
+  // Show toast notifications for wallet connection events
+  useEffect(() => {
+    if (isConnected && address) {
+      toast.success(`Wallet connected: ${address.slice(0, 6)}...${address.slice(-4)}`, {
+        id: "wallet-connection"
+      });
+    }
+  }, [isConnected, address]);
 
   if (isConnecting) {
     return (
