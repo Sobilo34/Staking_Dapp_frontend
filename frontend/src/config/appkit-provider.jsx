@@ -38,7 +38,6 @@ createAppKit({
     analytics: true, // Optional - defaults to your Cloud configuration
     injected: true, // Enable EIP6963 injected wallet detection
     email: true, // Keep email login
-    socials: ['google', 'x', 'github', 'discord', 'apple'], // Keep social logins
   }
 });
 

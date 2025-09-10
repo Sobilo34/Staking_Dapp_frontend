@@ -23,36 +23,31 @@ export const useUserStakingDetails = () => {
             try {
                 setLoading(true);
                 setError(null);
-                
-                const result = await publicClient.readContract({
+
+                const { stakedAmount, lastStakeTimestamp, pendingRewards, timeUntilUnlock, canWithdraw } = await publicClient.readContract({
                     ...stakingContractConfig,
                     functionName: "getUserDetails",
                     args: [address],
                 });
                 
-                console.log("Raw result from contract:", result);
+                const result = [stakedAmount, lastStakeTimestamp, pendingRewards, timeUntilUnlock, canWithdraw];
 
-                if (result && Array.isArray(result) && result.length >= 5) {
+                if (result) {
                     const userDetailsData = {
                         stakedAmount: result[0],
                         lastStakeTimestamp: result[1],
                         pendingRewards: result[2],
                         timeUntilUnlock: result[3],
                         canWithdraw: result[4],
-                        // Formatted versions for display
                         formattedStakedAmount: formatTokenAmount(result[0]),
                         formattedPendingRewards: formatTokenAmount(result[2]),
                     };
-                    
-                    console.log("Processed user details:", userDetailsData);
                     setUserDetails(userDetailsData);
                 } else {
-                    console.warn("Invalid result format:", result);
                     setError("Invalid data format from contract");
                     setUserDetails(null);
                 }
             } catch (err) {
-                console.error("Error fetching user details:", err);
                 setError(err.message || "Failed to fetch user details");
                 setUserDetails(null);
             } finally {
@@ -98,7 +93,6 @@ export const useUserStakingDetails = () => {
                     setUserDetails(null);
                 }
             } catch (err) {
-                console.error("Error refetching user details:", err);
                 setError(err.message || "Failed to fetch user details");
                 setUserDetails(null);
             } finally {

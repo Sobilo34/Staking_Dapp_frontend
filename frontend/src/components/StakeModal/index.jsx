@@ -1,13 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useStaking from '../../hooks/useStaking';
 import useTokenBalance from '../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../config/index.js';
 
+
 export default function StakeModal({ isOpen, onClose, onSuccess }) {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
-  const { stake, isStaking } = useStaking();
+  const [isApproved, setIsApproved] = useState(false);
+  const [checkingApproval, setCheckingApproval] = useState(false);
+  const { stake, isStaking, approveTokens, isApproving, checkAllowance } = useStaking();
   const { balance } = useTokenBalance();
+
+  // Check approval status when modal opens or amount changes
+  useEffect(() => {
+    if (!isOpen || !amount || parseFloat(amount) <= 0) {
+      setIsApproved(false);
+      return;
+    }
+    let cancelled = false;
+    const check = async () => {
+      setCheckingApproval(true);
+      try {
+        const ok = await checkAllowance(amount);
+        if (!cancelled) setIsApproved(ok);
+      } catch {
+        if (!cancelled) setIsApproved(false);
+      } finally {
+        if (!cancelled) setCheckingApproval(false);
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [isOpen, amount, checkAllowance]);
+
+  const handleApprove = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await approveTokens(amount);
+      setIsApproved(true);
+    } catch (err) {
+      setError(err.message || 'Approval failed');
+    }
+  };
 
   const handleStake = async (e) => {
     e.preventDefault();
@@ -97,17 +133,28 @@ export default function StakeModal({ isOpen, onClose, onSuccess }) {
               type="button"
               onClick={onClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              disabled={isStaking}
+              disabled={isStaking || isApproving || checkingApproval}
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={isStaking || !amount}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isStaking ? 'Staking...' : 'Stake'}
-            </button>
+            {!isApproved ? (
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={isApproving || checkingApproval || !amount}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isApproving || checkingApproval ? 'Approving...' : 'Approve'}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isStaking || !amount}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isStaking ? 'Staking...' : 'Stake'}
+              </button>
+            )}
           </div>
         </form>
       </div>

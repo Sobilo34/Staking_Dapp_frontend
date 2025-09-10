@@ -29,19 +29,61 @@ export const SECONDS_PER_MINUTE = 60;
 
 // Utility functions
 export const formatTokenAmount = (amount, decimals = 18) => {
-    return (Number(amount) / Math.pow(10, decimals)).toFixed(4);
+    try {
+        if (amount === null || amount === undefined || amount === '') {
+            return '0.0000';
+        }
+        
+        const numAmount = Number(amount);
+        if (isNaN(numAmount)) {
+            return '0.0000';
+        }
+        
+        return (numAmount / Math.pow(10, decimals)).toFixed(4);
+    } catch (error) {
+        console.error('Error formatting token amount:', error);
+        return '0.0000';
+    }
 };
 
 export const parseTokenAmount = (amount, decimals = 18) => {
-    return BigInt(Math.floor(Number(amount) * Math.pow(10, decimals)));
+    try {
+        if (amount === null || amount === undefined || amount === '') {
+            return BigInt(0);
+        }
+        
+        const numAmount = Number(amount);
+        if (isNaN(numAmount)) {
+            return BigInt(0);
+        }
+        
+        return BigInt(Math.floor(numAmount * Math.pow(10, decimals)));
+    } catch (error) {
+        console.error('Error parsing token amount:', error);
+        return BigInt(0);
+    }
 };
 
 export const formatDuration = (seconds) => {
-    const days = Math.floor(seconds / (24 * 60 * 60));
-    const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
-    const minutes = Math.floor((seconds % (60 * 60)) / 60);
-    
-    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    try {
+        if (seconds === null || seconds === undefined || seconds === '') {
+            return '0m';
+        }
+        
+        const numSeconds = Number(seconds);
+        if (isNaN(numSeconds) || numSeconds <= 0) {
+            return '0m';
+        }
+        
+        const days = Math.floor(numSeconds / (24 * 60 * 60));
+        const hours = Math.floor((numSeconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((numSeconds % (60 * 60)) / 60);
+        
+        if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
+    } catch (error) {
+        console.error('Error formatting duration:', error);
+        return '0m';
+    }
 };

@@ -9,91 +9,93 @@ export default function StakingStats() {
   const { poolData, loading: poolLoading } = useStakingPool();
   const { balance } = useTokenBalance();
 
-  console.log("User Details:", userDetails);
-  console.log("Pool Data:", poolData);
-  console.log("User Balance:", balance);
   if (userLoading || poolLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
+      <div className="stats-grid mb-8">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="card loading-skeleton h-20">
+            <div className="h-4 bg-gray-200 rounded mb-3"></div>
+            <div className="h-6 bg-gray-200 rounded"></div>
           </div>
         ))}
       </div>
     );
   }
 
+  const stats = [
+    {
+      title: "Available Balance",
+      value: `${formatTokenAmount(balance)} STK`,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200"
+    },
+    {
+      title: "Your Staked",
+      value: `${userDetails ? formatTokenAmount(userDetails.stakedAmount) : '0'} STK`,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50",
+      borderColor: "border-indigo-200"
+    },
+    {
+      title: "Pending Rewards",
+      value: `${userDetails ? formatTokenAmount(userDetails.pendingRewards) : '0'} STK`,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      borderColor: "border-green-200"
+    },
+    {
+      title: "Current APR",
+      value: `${poolData.currentRewardRate ? Number(poolData.currentRewardRate) : 0}%`,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200"
+    },
+    {
+      title: "Total Staked",
+      value: `${formatTokenAmount(poolData.totalStaked)} STK`,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
+      borderColor: "border-cyan-200"
+    },
+    {
+      title: "Lock Status",
+      value: userDetails?.timeUntilUnlock > 0 
+        ? formatDuration(Number(userDetails.timeUntilUnlock))
+        : "Unlocked",
+      color: userDetails?.timeUntilUnlock > 0 ? "text-orange-600" : "text-green-600",
+      bgColor: userDetails?.timeUntilUnlock > 0 ? "bg-orange-50" : "bg-green-50",
+      borderColor: userDetails?.timeUntilUnlock > 0 ? "border-orange-200" : "border-green-200"
+    },
+    {
+      title: "Total Rewards",
+      value: `${formatTokenAmount(poolData.totalRewards)} STK`,
+      color: "text-teal-600",
+      bgColor: "bg-teal-50",
+      borderColor: "border-teal-200"
+    },
+    {
+      title: "Emergency Penalty",
+      value: `${Number(poolData.emergencyWithdrawPenalty)}%`,
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200"
+    }
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {/* User Balance */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Available Balance</h3>
-        <p className="text-2xl font-bold text-gray-900">
-          {formatTokenAmount(balance)} STK
-        </p>
-      </div>
-
-      {/* Staked Amount */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Your Staked</h3>
-        <p className="text-2xl font-bold text-blue-600">
-          {userDetails ? formatTokenAmount(userDetails.stakedAmount) : '0'} STK
-        </p>
-      </div>
-
-      {/* Pending Rewards */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Pending Rewards</h3>
-        <p className="text-2xl font-bold text-green-600">
-          {userDetails ? formatTokenAmount(userDetails.pendingRewards) : '0'} STK
-        </p>
-      </div>
-
-      {/* Current APR */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Current APR</h3>
-        <p className="text-2xl font-bold text-purple-600">
-          {poolData.currentRewardRate ? Number(poolData.currentRewardRate) : 0}%
-        </p>
-      </div>
-
-      {/* Total Pool Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Total Staked</h3>
-        <p className="text-2xl font-bold text-gray-900">
-          {formatTokenAmount(poolData.totalStaked)} STK
-        </p>
-      </div>
-
-      {/* Lock Status */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Lock Status</h3>
-        {userDetails?.timeUntilUnlock > 0 ? (
-          <p className="text-2xl font-bold text-orange-600">
-            {formatDuration(Number(userDetails.timeUntilUnlock))}
+    <div className="stats-grid mb-8">
+      {stats.map((stat, index) => (
+        <div 
+          key={index} 
+          className={`card ${stat.bgColor} ${stat.borderColor}`}
+        >
+          <h3 className="text-xs font-medium text-gray-600 mb-2">{stat.title}</h3>
+          <p className={`text-sm font-bold ${stat.color}`}>
+            {stat.value}
           </p>
-        ) : (
-          <p className="text-2xl font-bold text-green-600">Unlocked</p>
-        )}
-      </div>
-
-      {/* Total Rewards Pool */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Total Rewards</h3>
-        <p className="text-2xl font-bold text-indigo-600">
-          {formatTokenAmount(poolData.totalRewards)} STK
-        </p>
-      </div>
-
-      {/* Emergency Penalty */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Emergency Penalty</h3>
-        <p className="text-2xl font-bold text-red-600">
-          {Number(poolData.emergencyWithdrawPenalty)}%
-        </p>
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

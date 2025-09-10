@@ -118,23 +118,17 @@ export const useStaking = () => {
 
         try {
             setIsWithdrawing(true);
-
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
                 functionName: "withdraw",
                 args: [parseTokenAmount(amount)],
             });
-
-            // Wait for transaction to be mined
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            
             if (receipt.status === "reverted") {
                 throw new Error("Transaction reverted");
             }
-
             return { success: true, hash };
         } catch (error) {
-            console.error("Withdrawal failed:", error);
             throw error;
         } finally {
             setIsWithdrawing(false);
@@ -149,22 +143,16 @@ export const useStaking = () => {
 
         try {
             setIsClaiming(true);
-
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
                 functionName: "claimRewards",
             });
-
-            // Wait for transaction to be mined
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            
             if (receipt.status === "reverted") {
                 throw new Error("Transaction reverted");
             }
-
             return { success: true, hash };
         } catch (error) {
-            console.error("Claim rewards failed:", error);
             throw error;
         } finally {
             setIsClaiming(false);
@@ -179,22 +167,16 @@ export const useStaking = () => {
 
         try {
             setIsEmergencyWithdrawing(true);
-
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
                 functionName: "emergencyWithdraw",
             });
-
-            // Wait for transaction to be mined
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            
             if (receipt.status === "reverted") {
                 throw new Error("Transaction reverted");
             }
-
             return { success: true, hash };
         } catch (error) {
-            console.error("Emergency withdrawal failed:", error);
             throw error;
         } finally {
             setIsEmergencyWithdrawing(false);
