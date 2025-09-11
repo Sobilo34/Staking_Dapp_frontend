@@ -46,16 +46,6 @@ export default function StakingStats() {
     <div className="bg-white rounded-lg shadow p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">Staking Overview</h2>
-        
-        {/* Debug Information */}
-        <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
-          <p><strong>Debug Info:</strong></p>
-          <p>Event Updates: {eventUpdateCount}</p>
-          <p>Event User Staked: {eventData.userStakedAmount || 'null'}</p>
-          <p>Combined User Staked: {stakingEventData.userStakedAmount || 'null'}</p>
-          <p>Is From Events: {stakingEventData.isFromEvents ? 'Yes' : 'No'}</p>
-          <p>Last Update: {stakingEventData.lastUpdate?.toLocaleTimeString() || 'null'}</p>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

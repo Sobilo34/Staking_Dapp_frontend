@@ -95,20 +95,31 @@ export const useStaking = () => {
 
         // Event handlers
         const handleStakedEvent = (user, amount, timestamp, newTotalStaked, currentRewardRate, event) => {
-            console.log('Staked event received:', {
+            console.log('🥩 STAKED EVENT RECEIVED - RAW PARAMETERS:', {
                 user,
-                amount: amount.toString(),
-                timestamp: timestamp.toString(),
-                newTotalStaked: newTotalStaked.toString(),
-                currentRewardRate: currentRewardRate.toString(),
-                isCurrentUser: user.toLowerCase() === address.toLowerCase()
+                amount: amount?.toString(),
+                timestamp: timestamp?.toString(), 
+                newTotalStaked: newTotalStaked?.toString(),
+                currentRewardRate: currentRewardRate?.toString(),
+                event: event || 'no event object',
+                currentUserAddress: address
             });
 
-            if (user.toLowerCase() === address.toLowerCase()) {
+            console.log('🔍 USER COMPARISON:', {
+                eventUser: user?.toLowerCase(),
+                currentUser: address?.toLowerCase(),
+                isMatch: user?.toLowerCase() === address?.toLowerCase()
+            });
+
+            if (user?.toLowerCase() === address?.toLowerCase()) {
+                console.log('✅ STAKED EVENT IS FOR CURRENT USER!');
+                
                 const formattedAmount = formatTokenAmount(amount.toString());
+                const formattedTotalStaked = formatTokenAmount(newTotalStaked.toString());
                 
                 console.log('🚀 PROCESSING STAKE EVENT FOR CURRENT USER');
                 console.log('💰 Amount staked:', formattedAmount);
+                console.log('📊 New total staked:', formattedTotalStaked);
                 
                 setEventData(prev => {
                     // Calculate new user staked amount
@@ -116,29 +127,41 @@ export const useStaking = () => {
                         parseFloat(prev.userStakedAmount) : 0;
                     const newUserStaked = currentUserStaked + parseFloat(formattedAmount);
                     
+                    console.log('📈 CALCULATING NEW USER STAKED:', {
+                        previousAmount: currentUserStaked,
+                        stakingAmount: parseFloat(formattedAmount),
+                        newAmount: newUserStaked
+                    });
+                    
                     const newData = {
                         ...prev,
                         lastStakeEvent: {
                             user,
                             amount: formattedAmount,
                             timestamp: new Date(Number(timestamp) * 1000),
-                            transactionHash: event.transactionHash
+                            transactionHash: event?.transactionHash || 'unknown'
                         },
                         userStakedAmount: newUserStaked.toFixed(4),
-                        totalStaked: formatTokenAmount(newTotalStaked.toString()),
+                        totalStaked: formattedTotalStaked,
                         currentRewardRate: currentRewardRate.toString(),
                         lastStakeTimestamp: timestamp.toString(),
                         lastUpdateTimestamp: Date.now()
                     };
                     
-                    console.log('📊 NEW EVENT DATA STATE:', newData);
+                    console.log('📊 NEW EVENT DATA STATE AFTER STAKE:', newData);
                     return newData;
                 });
                 
-                setEventUpdateCount(prev => prev + 1);
+                setEventUpdateCount(prev => {
+                    const newCount = prev + 1;
+                    console.log('🔄 Event update count incremented to:', newCount);
+                    return newCount;
+                });
                 
                 toast.success(`Stake confirmed: ${formattedAmount} STK tokens staked`);
                 console.log('✅ Updated user staked amount after stake event');
+            } else {
+                console.log('❌ Staked event is NOT for current user, ignoring');
             }
         };
 
@@ -284,28 +307,87 @@ export const useStaking = () => {
         console.log('📍 Token contract address:', stakingTokenConfig.address);
         console.log('👤 Listening for user:', address);
         
+        // Test connection first
+        stakingContract.removeAllListeners(); // Clean any existing listeners
+        
+        // Add listeners one by one with verification
+        console.log('🔗 Adding Staked event listener...');
+        
+        // Primary listener
         stakingContract.on('Staked', handleStakedEvent);
+        
+        // Alternative generic listener to catch any Staked events
+        stakingContract.on('Staked', (...args) => {
+            console.log('🔥 RAW STAKED EVENT CAPTURED:', {
+                argumentCount: args.length,
+                arguments: args.map((arg, index) => ({
+                    index,
+                    value: arg?.toString ? arg.toString() : arg,
+                    type: typeof arg
+                }))
+            });
+        });
+        
+        // Also try with event filter as backup
+        try {
+            const stakedFilter = stakingContract.filters.Staked(address);
+            console.log('🎯 Created filter for Staked events for user:', address);
+            
+            stakingContract.on(stakedFilter, (...args) => {
+                console.log('🎯 STAKED EVENT VIA FILTER:', args);
+                if (args.length >= 5) {
+                    const [user, amount, timestamp, newTotalStaked, currentRewardRate] = args;
+                    const event = args[args.length - 1]; // Last argument is usually the event object
+                    handleStakedEvent(user, amount, timestamp, newTotalStaked, currentRewardRate, event);
+                }
+            });
+        } catch (err) {
+            console.log('Could not create filter for Staked events:', err);
+        }
+        
+        console.log('🔗 Adding Withdrawn event listener...');
         stakingContract.on('Withdrawn', handleWithdrawnEvent);
+        
+        console.log('🔗 Adding RewardsClaimed event listener...');
         stakingContract.on('RewardsClaimed', handleRewardsClaimedEvent);
+        
+        console.log('🔗 Adding EmergencyWithdrawn event listener...');
         stakingContract.on('EmergencyWithdrawn', handleEmergencyWithdrawnEvent);
+        
+        console.log('🔗 Adding Approval event listener...');
         tokenContract.on('Approval', handleApprovalEvent);
         
-        console.log('✅ Event listeners attached successfully');
+        console.log('✅ All event listeners attached successfully');
 
         // Test that events can be detected
         stakingContract.queryFilter('Staked', -10).then(events => {
             console.log('📊 Recent Staked events (last 10 blocks):', events.length);
-        }).catch(err => console.log('No recent events found or error:', err));
+            if (events.length > 0) {
+                console.log('🔍 Latest Staked event:', events[events.length - 1]);
+            }
+        }).catch(err => console.log('No recent Staked events found or error:', err));
+
+        // Try to get the current listener count
+        setTimeout(() => {
+            console.log('📡 Event listeners verification:');
+            console.log('- Staked listeners:', stakingContract.listenerCount('Staked'));
+            console.log('- Contract connected:', stakingContract.provider ? 'Yes' : 'No');
+        }, 1000);
 
         // Cleanup function
         return () => {
-            console.log('Cleaning up ethers event listeners...');
+            console.log('🧹 Cleaning up ethers event listeners...');
             stakingContract.off('Staked', handleStakedEvent);
             stakingContract.off('Withdrawn', handleWithdrawnEvent);
             stakingContract.off('RewardsClaimed', handleRewardsClaimedEvent);
             stakingContract.off('EmergencyWithdrawn', handleEmergencyWithdrawnEvent);
             tokenContract.off('Approval', handleApprovalEvent);
-            console.log('Event listeners cleaned up successfully');
+            
+            // Also remove all listeners as backup
+            stakingContract.removeAllListeners();
+            tokenContract.removeAllListeners();
+            
+            console.log('✅ Event listeners cleaned up successfully');
         };
     }, [publicClient, address]);
 
@@ -407,6 +489,36 @@ export const useStaking = () => {
             }
             
             toast.success(`Successfully staked ${amount} STK tokens!`, { id: "stake" });
+            console.log('Stake completed successfully');
+            
+            // Force refresh of user data after 2 seconds if event doesn't come
+            setTimeout(async () => {
+                console.log('🔄 Force refreshing user data after stake...');
+                try {
+                    const userDetails = await publicClient.readContract({
+                        ...stakingContractConfig,
+                        functionName: "getUserDetails",
+                        args: [address],
+                    });
+                    
+                    if (userDetails && userDetails.length >= 3) {
+                        const [stakedAmount] = userDetails;
+                        setEventData(prev => {
+                            const newAmount = formatTokenAmount(stakedAmount.toString());
+                            console.log('✅ Force updated user staked amount to:', newAmount);
+                            return {
+                                ...prev,
+                                userStakedAmount: newAmount,
+                                lastUpdateTimestamp: Date.now()
+                            };
+                        });
+                        setEventUpdateCount(prev => prev + 1);
+                    }
+                } catch (error) {
+                    console.error('Error force refreshing user data:', error);
+                }
+            }, 2000);
+            
             return { success: true, hash };
         } catch (error) {
             console.error("Staking failed:", error);
