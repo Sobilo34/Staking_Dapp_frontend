@@ -95,11 +95,6 @@ export const useStakingPool = () => {
         };
 
         fetchPoolData();
-        
-        // Refresh every 60 seconds
-        const interval = setInterval(fetchPoolData, 60000);
-        
-        return () => clearInterval(interval);
     }, [publicClient]);
 
     const refetch = async () => {

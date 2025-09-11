@@ -102,92 +102,115 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Withdraw Tokens</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            disabled={isWithdrawing}
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        {/* Modal Header */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-center">
+          <div className="text-5xl mb-2">💰</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Withdraw Tokens</h2>
+          <p className="text-green-100 text-sm">Withdraw your staked tokens safely</p>
         </div>
+        
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white/80 hover:text-white text-xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors duration-200"
+          disabled={isWithdrawing}
+        >
+          ✕
+        </button>
 
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-gray-500">Loading staking details...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleWithdraw}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Amount to Withdraw
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.0"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={isWithdrawing}
-                />
-                <button
-                  type="button"
-                  onClick={handleMaxClick}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-blue-500 hover:text-blue-700"
-                  disabled={isWithdrawing || !userDetails?.stakedAmount}
-                >
-                  MAX
-                </button>
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                Staked: {getStakedAmount()} STK
-              </div>
+        {/* Modal Content */}
+        <div className="p-6">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+              <p className="mt-2 text-gray-500">Loading staking details...</p>
             </div>
-
-            {/* Lock status warning */}
-            {userDetails && !userDetails.canWithdraw && (
-              <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-lg">
-                <div className="text-sm">
-                  {getTimeDisplay() ? (
-                    <>Tokens are locked for {getTimeDisplay()}</>
-                  ) : (
-                    'Tokens are currently locked'
-                  )}
+          ) : (
+            <form onSubmit={handleWithdraw}>
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-3 text-gray-800">
+                  Amount to Withdraw
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.0"
+                    className="w-full p-4 pr-16 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50 text-lg font-medium"
+                    disabled={isWithdrawing}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleMaxClick}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors duration-200"
+                    disabled={isWithdrawing || !userDetails?.stakedAmount}
+                  >
+                    MAX
+                  </button>
+                </div>
+                <div className="text-sm text-gray-600 mt-2 flex justify-between">
+                  <span>Staked: {getStakedAmount()} STK</span>
+                  <span className="text-green-600 font-medium">Available to withdraw</span>
                 </div>
               </div>
-            )}
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
-                {error}
+              {/* Lock Status Information */}
+              {userDetails && !userDetails.canWithdraw && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <h3 className="font-semibold text-amber-800 mb-1 flex items-center text-sm">
+                    ⏳ Tokens Locked
+                  </h3>
+                  <p className="text-amber-700 text-sm">
+                    {getTimeDisplay() ? (
+                      <>Your tokens are locked for {getTimeDisplay()}. Please wait before withdrawing.</>
+                    ) : (
+                      'Your tokens are currently locked. Please wait before withdrawing.'
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <h3 className="font-semibold text-red-800 mb-1 flex items-center text-sm">
+                    ⚠️ Error
+                  </h3>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-xl transition-colors duration-200 disabled:opacity-50"
+                  disabled={isWithdrawing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isWithdrawing || !amount || !userDetails?.canWithdraw || loading}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 disabled:opacity-50"
+                >
+                  {isWithdrawing ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      Withdrawing...
+                    </div>
+                  ) : (
+                    'Withdraw Tokens'
+                  )}
+                </button>
               </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                disabled={isWithdrawing}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isWithdrawing || !amount || !userDetails?.canWithdraw || loading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isWithdrawing ? 'Withdrawing...' : 'Withdraw'}
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

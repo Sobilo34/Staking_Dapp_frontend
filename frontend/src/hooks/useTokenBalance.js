@@ -41,11 +41,6 @@ export const useTokenBalance = () => {
         };
 
         fetchBalance();
-        
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchBalance, 30000);
-        
-        return () => clearInterval(interval);
     }, [address, publicClient]);
 
     const refetch = async () => {

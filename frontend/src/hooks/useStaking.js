@@ -11,8 +11,6 @@ export const useStaking = () => {
     const { address } = useAccount();
     const publicClient = usePublicClient();
     const { writeContractAsync } = useWriteContract();
-    // const { ethersProvider } = useEthersProvider();
-    // const { waitForTransactionReceipt } = useWaitForTransactionReceipt();
     const [isStaking, setIsStaking] = useState(false);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
@@ -119,24 +117,6 @@ export const useStaking = () => {
             setIsStaking(false);
         }
     }, [address, writeContractAsync, publicClient, checkAllowance, approveTokens]);
-
-    // useEffect(() => {
-    //     const onStake = (staker, amount, timestamp) => {
-    //         if (address && staker.toLowerCase() === address.toLowerCase()) {
-    //             toast.success(`Successfully staked ${amount} STK tokens!`, { id: "stake" });
-    //         }
-    //     };
-
-    //     const contract = new ethers.Contract(
-    //         stakingContractConfig.address,
-    //         stakingContractConfig.abi,
-    //         ethersProvider
-    //     );
-
-    //     contract.on("Staked", onStake);
-
-    //     return () => contract.off("Staked", onStake);
-    // }, [address, ethersProvider]);
 
     // Withdraw tokens
     const withdraw = useCallback(async (amount) => {
