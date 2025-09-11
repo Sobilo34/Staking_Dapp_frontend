@@ -2,8 +2,6 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicCl
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { stakingContractConfig, stakingTokenConfig, parseTokenAmount } from "../config/index.js";
-import { useStakingUpdates } from "./useStakingUpdates.js";
-import { useStakingUpdateContext } from "../contexts/StakingUpdateContext.jsx";
 // import { useEthersProvider } from "./ethersAdapter";
 
 /**
@@ -13,8 +11,6 @@ export const useStaking = () => {
     const { address } = useAccount();
     const publicClient = usePublicClient();
     const { writeContractAsync } = useWriteContract();
-    const { listenForFunctionEvents } = useStakingUpdates();
-    const { triggerUpdates } = useStakingUpdateContext();
     const [isStaking, setIsStaking] = useState(false);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
@@ -113,16 +109,6 @@ export const useStaking = () => {
             }
             
             toast.success(`Successfully staked ${amount} STK tokens!`, { id: "stake" });
-            
-            // Trigger function-based event listening and updates
-            listenForFunctionEvents({
-                functionType: 'stake',
-                transactionHash: hash,
-                onUpdate: (eventData, functionType) => {
-                    triggerUpdates(eventData, functionType, address);
-                }
-            });
-            
             return { success: true, hash };
         } catch (error) {
             console.error("Staking failed:", error);
@@ -163,16 +149,6 @@ export const useStaking = () => {
             }
             
             toast.success(`Successfully withdrew ${amount} STK tokens!`, { id: "withdraw" });
-            
-            // Trigger function-based event listening and updates
-            listenForFunctionEvents({
-                functionType: 'withdraw',
-                transactionHash: hash,
-                onUpdate: (eventData, functionType) => {
-                    triggerUpdates(eventData, functionType, address);
-                }
-            });
-            
             return { success: true, hash };
         } catch (error) {
             console.error("Withdrawal failed:", error);
@@ -207,16 +183,6 @@ export const useStaking = () => {
             }
             
             toast.success("Rewards claimed successfully! 🎉", { id: "claim" });
-            
-            // Trigger function-based event listening and updates
-            listenForFunctionEvents({
-                functionType: 'claim',
-                transactionHash: hash,
-                onUpdate: (eventData, functionType) => {
-                    triggerUpdates(eventData, functionType, address);
-                }
-            });
-            
             return { success: true, hash };
         } catch (error) {
             console.error("Claim rewards failed:", error);
@@ -251,16 +217,6 @@ export const useStaking = () => {
             }
             
             toast.success("Emergency withdrawal completed (penalty applied)", { id: "emergency" });
-            
-            // Trigger function-based event listening and updates
-            listenForFunctionEvents({
-                functionType: 'emergency',
-                transactionHash: hash,
-                onUpdate: (eventData, functionType) => {
-                    triggerUpdates(eventData, functionType, address);
-                }
-            });
-            
             return { success: true, hash };
         } catch (error) {
             console.error("Emergency withdrawal failed:", error);

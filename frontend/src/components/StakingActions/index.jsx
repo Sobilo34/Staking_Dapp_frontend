@@ -50,9 +50,8 @@ export default function StakingActions() {
       id: 'stake',
       title: 'Stake Tokens',
       description: 'Stake your tokens to start earning rewards',
-      icon: '🚀',
-      color: 'from-blue-500 to-blue-600',
-      hoverColor: 'hover:from-blue-600 hover:to-blue-700',
+      color: 'bg-blue-600',
+      hoverColor: 'hover:bg-blue-700',
       textColor: 'text-white',
       action: () => setShowStakeModal(true),
       disabled: false,
@@ -62,9 +61,8 @@ export default function StakingActions() {
       id: 'withdraw',
       title: 'Withdraw',
       description: 'Withdraw your staked tokens after lock period',
-      icon: '💰',
-      color: 'from-green-500 to-green-600',
-      hoverColor: 'hover:from-green-600 hover:to-green-700',
+      color: 'bg-green-600',
+      hoverColor: 'hover:bg-green-700',
       textColor: 'text-white',
       action: () => setShowWithdrawModal(true),
       disabled: !hasStake,
@@ -74,9 +72,8 @@ export default function StakingActions() {
       id: 'claim',
       title: 'Claim Rewards',
       description: 'Claim your earned staking rewards',
-      icon: '🎁',
-      color: 'from-purple-500 to-purple-600',
-      hoverColor: 'hover:from-purple-600 hover:to-purple-700',
+      color: 'bg-purple-600',
+      hoverColor: 'hover:bg-purple-700',
       textColor: 'text-white',
       action: handleClaimRewards,
       disabled: !hasRewards,
@@ -86,9 +83,8 @@ export default function StakingActions() {
       id: 'emergency',
       title: 'Emergency Withdraw',
       description: 'Immediate withdrawal with penalty',
-      icon: '🚨',
-      color: 'from-red-500 to-red-600',
-      hoverColor: 'hover:from-red-600 hover:to-red-700',
+      color: 'bg-red-600',
+      hoverColor: 'hover:bg-red-700',
       textColor: 'text-white',
       action: () => setShowEmergencyConfirm(true),
       disabled: !hasStake,
@@ -109,31 +105,26 @@ export default function StakingActions() {
             <div
               key={card.id}
               className={`
-                relative group rounded-xl overflow-hidden transition-all duration-300 
-                ${card.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer transform hover:scale-105 hover:shadow-lg'}
+                border rounded-lg p-4 transition-all duration-200 
+                ${card.disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'cursor-pointer hover:shadow-md bg-white border-gray-200'}
               `}
             >
-              <div className={`
-                bg-gradient-to-br ${card.color} ${!card.disabled ? card.hoverColor : ''} 
-                p-6 h-full min-h-[160px] flex flex-col justify-between
-                transition-all duration-300
-              `}>
+              <div className="h-full min-h-[120px] flex flex-col">
                 {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="text-3xl">{card.icon}</div>
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="font-medium text-lg text-gray-900">
+                    {card.title}
+                  </h4>
                   {card.disabled && (
-                    <div className="text-white/60 text-xs bg-white/20 px-2 py-1 rounded-full">
+                    <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                       Disabled
-                    </div>
+                    </span>
                   )}
                 </div>
                 
                 {/* Card Content */}
-                <div className="flex-1">
-                  <h4 className={`font-semibold text-lg mb-2 ${card.textColor}`}>
-                    {card.title}
-                  </h4>
-                  <p className="text-white/80 text-sm leading-relaxed">
+                <div className="flex-1 mb-4">
+                  <p className="text-gray-600 text-sm">
                     {card.description}
                   </p>
                 </div>
@@ -143,10 +134,11 @@ export default function StakingActions() {
                   onClick={card.disabled ? undefined : card.action}
                   disabled={card.disabled || card.loading}
                   className={`
-                    mt-4 w-full bg-white/20 hover:bg-white/30 
-                    text-white font-medium py-2.5 px-4 rounded-lg
-                    transition-all duration-200 text-sm
-                    ${card.disabled ? 'cursor-not-allowed' : 'hover:shadow-md'}
+                    w-full py-2 px-4 rounded font-medium text-sm transition-colors duration-200
+                    ${card.disabled 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : `${card.color} ${card.hoverColor} ${card.textColor}`
+                    }
                     ${card.loading ? 'opacity-75' : ''}
                   `}
                 >
@@ -168,44 +160,35 @@ export default function StakingActions() {
         {userDetails && (
           <div className="space-y-4">
             {userDetails.timeUntilUnlock > 0 && (
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <div className="text-2xl mr-3">⏰</div>
-                  <div>
-                    <h4 className="font-medium text-amber-800 mb-1">Tokens Locked</h4>
-                    <p className="text-sm text-amber-700">
-                      Your tokens are locked for {Math.floor(Number(userDetails.timeUntilUnlock) / 3600)} hours 
-                      and {Math.floor((Number(userDetails.timeUntilUnlock) % 3600) / 60)} minutes
-                    </p>
-                  </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div>
+                  <h4 className="font-medium text-orange-800 mb-1">Tokens Locked</h4>
+                  <p className="text-sm text-orange-700">
+                    Your tokens are locked for {Math.floor(Number(userDetails.timeUntilUnlock) / 3600)} hours 
+                    and {Math.floor((Number(userDetails.timeUntilUnlock) % 3600) / 60)} minutes
+                  </p>
                 </div>
               </div>
             )}
             
             {!hasRewards && hasStake && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <div className="text-2xl mr-3">💡</div>
-                  <div>
-                    <h4 className="font-medium text-blue-800 mb-1">Earning Rewards</h4>
-                    <p className="text-sm text-blue-700">
-                      Your tokens are actively earning rewards! Check back soon to see your accumulated rewards.
-                    </p>
-                  </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div>
+                  <h4 className="font-medium text-blue-800 mb-1">Earning Rewards</h4>
+                  <p className="text-sm text-blue-700">
+                    Your tokens are actively earning rewards! Check back soon to see your accumulated rewards.
+                  </p>
                 </div>
               </div>
             )}
 
             {hasRewards && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <div className="text-2xl mr-3">✨</div>
-                  <div>
-                    <h4 className="font-medium text-green-800 mb-1">Rewards Available</h4>
-                    <p className="text-sm text-green-700">
-                      You have pending rewards ready to claim! Click the "Claim Rewards" card above.
-                    </p>
-                  </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div>
+                  <h4 className="font-medium text-green-800 mb-1">Rewards Available</h4>
+                  <p className="text-sm text-green-700">
+                    You have pending rewards ready to claim! Click the "Claim Rewards" card above.
+                  </p>
                 </div>
               </div>
             )}
@@ -229,55 +212,54 @@ export default function StakingActions() {
       {/* Emergency Withdraw Confirmation Modal */}
       {showEmergencyConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-center">
-              <div className="text-5xl mb-2">🚨</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Emergency Withdraw</h2>
-              <p className="text-red-100 text-sm">Immediate withdrawal with penalty</p>
+        <div className="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 overflow-hidden border border-gray-200">
+          {/* Modal Header */}
+          <div className="bg-red-600 p-6 text-center">
+            <h2 className="text-2xl font-bold text-white mb-2">Emergency Withdraw</h2>
+            <p className="text-red-100 text-sm">Immediate withdrawal with penalty</p>
+          </div>
+          
+          {/* Modal Content */}
+          <div className="p-6">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-red-800 mb-2">
+                Important Warning
+              </h3>
+              <p className="text-red-700 text-sm leading-relaxed">
+                This action will withdraw all your staked tokens immediately, but you will lose{' '}
+                <span className="font-bold bg-red-200 px-1 rounded">
+                  {Number(userDetails?.emergencyWithdrawPenalty || 0)}%
+                </span>{' '}
+                as a penalty fee. This action cannot be undone.
+              </p>
             </div>
             
-            {/* Modal Content */}
-            <div className="p-6">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-red-800 mb-2 flex items-center">
-                  ⚠️ Important Warning
-                </h3>
-                <p className="text-red-700 text-sm leading-relaxed">
-                  This action will withdraw all your staked tokens immediately, but you will lose{' '}
-                  <span className="font-bold bg-red-200 px-1 rounded">
-                    {Number(userDetails?.emergencyWithdrawPenalty || 0)}%
-                  </span>{' '}
-                  as a penalty fee. This action cannot be undone.
-                </p>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowEmergencyConfirm(false)}
-                  disabled={isEmergencyWithdrawing}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-xl transition-colors duration-200 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEmergencyWithdraw}
-                  disabled={isEmergencyWithdrawing}
-                  className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 disabled:opacity-50"
-                >
-                  {isEmergencyWithdrawing ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                      Processing...
-                    </div>
-                  ) : (
-                    'Confirm Withdraw'
-                  )}
-                </button>
-              </div>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEmergencyConfirm(false)}
+                disabled={isEmergencyWithdrawing}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-xl transition-colors duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEmergencyWithdraw}
+                disabled={isEmergencyWithdrawing}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 disabled:opacity-50"
+              >
+                {isEmergencyWithdrawing ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  'Confirm Withdraw'
+                )}
+              </button>
             </div>
           </div>
+        </div>
         </div>
       )}
     </>

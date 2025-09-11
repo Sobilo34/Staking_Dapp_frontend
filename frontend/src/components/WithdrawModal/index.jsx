@@ -103,10 +103,9 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 overflow-hidden border border-gray-200">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-center">
-          <div className="text-5xl mb-2">💰</div>
+        <div className="bg-green-600 p-6 text-center">
           <h2 className="text-2xl font-bold text-white mb-2">Withdraw Tokens</h2>
           <p className="text-green-100 text-sm">Withdraw your staked tokens safely</p>
         </div>
@@ -117,7 +116,7 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
           className="absolute top-4 right-4 text-white/80 hover:text-white text-xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors duration-200"
           disabled={isWithdrawing}
         >
-          ✕
+          ×
         </button>
 
         {/* Modal Content */}
@@ -161,8 +160,8 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
               {/* Lock Status Information */}
               {userDetails && !userDetails.canWithdraw && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <h3 className="font-semibold text-amber-800 mb-1 flex items-center text-sm">
-                    ⏳ Tokens Locked
+                  <h3 className="font-semibold text-amber-800 mb-1 text-sm">
+                    Tokens Locked
                   </h3>
                   <p className="text-amber-700 text-sm">
                     {getTimeDisplay() ? (
@@ -176,8 +175,8 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
 
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <h3 className="font-semibold text-red-800 mb-1 flex items-center text-sm">
-                    ⚠️ Error
+                  <h3 className="font-semibold text-red-800 mb-1 text-sm">
+                    Error
                   </h3>
                   <p className="text-red-700 text-sm">{error}</p>
                 </div>
@@ -196,7 +195,7 @@ export default function WithdrawModal({ isOpen, onClose, onSuccess }) {
                 <button
                   type="submit"
                   disabled={isWithdrawing || !amount || !userDetails?.canWithdraw || loading}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 disabled:opacity-50"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 disabled:opacity-50"
                 >
                   {isWithdrawing ? (
                     <div className="flex items-center justify-center">
