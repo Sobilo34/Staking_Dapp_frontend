@@ -35,11 +35,9 @@ createAppKit({
   projectId,
   metadata,
   features: {
-    analytics: true, // Optional - defaults to your Cloud configuration
-    injected: true, // Enable EIP6963 injected wallet detection
-    email: true, // Keep email login
+    analytics: true // Optional - defaults to your Cloud configuration
   }
-});
+})
 
 export function AppKitProvider({ children }) {
   return (
