@@ -35,7 +35,8 @@ createAppKit({
   projectId,
   metadata,
   features: {
-    analytics: true // Optional - defaults to your Cloud configuration
+    analytics: true,
+    injected: true,
   }
 })
 
