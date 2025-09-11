@@ -1,11 +1,11 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { parseAbiItem } from "viem";
-import { stakingContractConfig, stakingTokenConfig, parseTokenAmount } from "../config/index.js";
+import { stakingContractConfig, stakingTokenConfig, parseTokenAmount, formatTokenAmount } from "../config/index.js";
+import { ethers } from "ethers";
 
 /**
- * Hook for staking operations with toast notifications and event watching
+ * Hook for staking operations with toast notifications and ethers event watching
  */
 export const useStaking = () => {
     const { address } = useAccount();
@@ -16,153 +16,306 @@ export const useStaking = () => {
     const [isClaiming, setIsClaiming] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
     const [isEmergencyWithdrawing, setIsEmergencyWithdrawing] = useState(false);
+    
+    // Debug state to track event updates
+    const [eventUpdateCount, setEventUpdateCount] = useState(0);
 
-    // Event watchers setup
+    // Event data state - comprehensive tracking
+    const [eventData, setEventData] = useState({
+        lastStakeEvent: null,
+        lastWithdrawEvent: null,
+        lastClaimEvent: null,
+        lastEmergencyWithdrawEvent: null,
+        lastApprovalEvent: null,
+        // Real-time values from events
+        userStakedAmount: null,
+        totalStaked: null,
+        currentRewardRate: null,
+        pendingRewards: null,
+        lastStakeTimestamp: null,
+        // Trigger for UI updates
+        lastUpdateTimestamp: null
+    });
+
+    // Ethers event listening setup
     useEffect(() => {
-        if (!publicClient || !stakingContractConfig.address) return;
-
-        const unwatchFunctions = [];
-
-        // Watch Staked events
-        const unwatchStaked = publicClient.watchEvent({
-            address: stakingContractConfig.address,
-            event: parseAbiItem('event Staked(address indexed user, uint256 amount, uint256 timestamp, uint256 newTotalStaked, uint256 currentRewardRate)'),
-            onLogs: logs => {
-                console.log('Staked events detected:', logs);
-                logs.forEach(log => {
-                    console.log('Processing Staked log:', {
-                        user: log.args?.user,
-                        amount: log.args?.amount,
-                        timestamp: log.args?.timestamp,
-                        newTotalStaked: log.args?.newTotalStaked,
-                        currentRewardRate: log.args?.currentRewardRate,
-                        currentUser: address,
-                        isForCurrentUser: log.args?.user?.toLowerCase() === address?.toLowerCase()
-                    });
-                    if (log.args?.user?.toLowerCase() === address?.toLowerCase()) {
-                        toast.success(`Stake confirmed: ${log.args.amount} tokens staked`);
-                    }
+        if (!publicClient || !stakingContractConfig.address || !address) return;
+        
+        console.log('Setting up ethers event listeners for address:', address);
+        
+        // Initialize current user data
+        const initializeUserData = async () => {
+            try {
+                console.log('Initializing user staking data...');
+                const userDetails = await publicClient.readContract({
+                    ...stakingContractConfig,
+                    functionName: "getUserDetails",
+                    args: [address],
                 });
-            }
-        });
-        unwatchFunctions.push(unwatchStaked);
-
-        // Watch Withdrawn events
-        const unwatchWithdrawn = publicClient.watchEvent({
-            address: stakingContractConfig.address,
-            event: parseAbiItem('event Withdrawn(address indexed user, uint256 amount, uint256 timestamp, uint256 newTotalStaked)'),
-            onLogs: logs => {
-                console.log('Withdrawn events detected:', logs);
-                logs.forEach(log => {
-                    console.log('Processing Withdrawn log:', {
-                        user: log.args?.user,
-                        amount: log.args?.amount,
-                        timestamp: log.args?.timestamp,
-                        newTotalStaked: log.args?.newTotalStaked,
-                        currentUser: address,
-                        isForCurrentUser: log.args?.user?.toLowerCase() === address?.toLowerCase()
+                
+                if (userDetails && userDetails.length >= 3) {
+                    const [stakedAmount, lastStakeTimestamp, pendingRewards] = userDetails;
+                    setEventData(prev => ({
+                        ...prev,
+                        userStakedAmount: formatTokenAmount(stakedAmount.toString()),
+                        pendingRewards: formatTokenAmount(pendingRewards.toString()),
+                        lastStakeTimestamp: lastStakeTimestamp.toString(),
+                        lastUpdateTimestamp: Date.now()
+                    }));
+                    console.log('Initialized user data:', {
+                        stakedAmount: formatTokenAmount(stakedAmount.toString()),
+                        pendingRewards: formatTokenAmount(pendingRewards.toString())
                     });
-                    if (log.args?.user?.toLowerCase() === address?.toLowerCase()) {
-                        toast.success(`Withdrawal confirmed: ${log.args.amount} tokens withdrawn`);
-                    }
-                });
+                }
+            } catch (error) {
+                console.error('Error initializing user data:', error);
             }
-        });
-        unwatchFunctions.push(unwatchWithdrawn);
+        };
 
-        // Watch RewardsClaimed events
-        const unwatchRewardsClaimed = publicClient.watchEvent({
-            address: stakingContractConfig.address,
-            event: parseAbiItem('event RewardsClaimed(address indexed user, uint256 amount, uint256 timestamp)'),
-            onLogs: logs => {
-                console.log('RewardsClaimed events detected:', logs);
-                logs.forEach(log => {
-                    console.log('Processing RewardsClaimed log:', {
-                        user: log.args?.user,
-                        amount: log.args?.amount,
-                        timestamp: log.args?.timestamp,
-                        currentUser: address,
-                        isForCurrentUser: log.args?.user?.toLowerCase() === address?.toLowerCase()
-                    });
-                    if (log.args?.user?.toLowerCase() === address?.toLowerCase()) {
-                        toast.success(`Rewards claimed: ${log.args.amount} tokens`);
-                    }
+        initializeUserData();
+        
+        // Create ethers provider from publicClient
+        const rpcUrl = publicClient.chain?.rpcUrls?.default.http[0];
+        if (!rpcUrl) {
+            console.error('No RPC URL available from publicClient');
+            return;
+        }
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const stakingContract = new ethers.Contract(
+            stakingContractConfig.address,
+            stakingContractConfig.abi,
+            provider
+        );
+        const tokenContract = new ethers.Contract(
+            stakingTokenConfig.address,
+            stakingTokenConfig.abi,
+            provider
+        );
+
+        // Event handlers
+        const handleStakedEvent = (user, amount, timestamp, newTotalStaked, currentRewardRate, event) => {
+            console.log('Staked event received:', {
+                user,
+                amount: amount.toString(),
+                timestamp: timestamp.toString(),
+                newTotalStaked: newTotalStaked.toString(),
+                currentRewardRate: currentRewardRate.toString(),
+                isCurrentUser: user.toLowerCase() === address.toLowerCase()
+            });
+
+            if (user.toLowerCase() === address.toLowerCase()) {
+                const formattedAmount = formatTokenAmount(amount.toString());
+                
+                console.log('🚀 PROCESSING STAKE EVENT FOR CURRENT USER');
+                console.log('💰 Amount staked:', formattedAmount);
+                
+                setEventData(prev => {
+                    // Calculate new user staked amount
+                    const currentUserStaked = prev.userStakedAmount ? 
+                        parseFloat(prev.userStakedAmount) : 0;
+                    const newUserStaked = currentUserStaked + parseFloat(formattedAmount);
+                    
+                    const newData = {
+                        ...prev,
+                        lastStakeEvent: {
+                            user,
+                            amount: formattedAmount,
+                            timestamp: new Date(Number(timestamp) * 1000),
+                            transactionHash: event.transactionHash
+                        },
+                        userStakedAmount: newUserStaked.toFixed(4),
+                        totalStaked: formatTokenAmount(newTotalStaked.toString()),
+                        currentRewardRate: currentRewardRate.toString(),
+                        lastStakeTimestamp: timestamp.toString(),
+                        lastUpdateTimestamp: Date.now()
+                    };
+                    
+                    console.log('📊 NEW EVENT DATA STATE:', newData);
+                    return newData;
                 });
+                
+                setEventUpdateCount(prev => prev + 1);
+                
+                toast.success(`Stake confirmed: ${formattedAmount} STK tokens staked`);
+                console.log('✅ Updated user staked amount after stake event');
             }
-        });
-        unwatchFunctions.push(unwatchRewardsClaimed);
+        };
 
-        // Watch EmergencyWithdrawn events
-        const unwatchEmergencyWithdrawn = publicClient.watchEvent({
-            address: stakingContractConfig.address,
-            event: parseAbiItem('event EmergencyWithdrawn(address indexed user, uint256 amount, uint256 penalty, uint256 timestamp)'),
-            onLogs: logs => {
-                console.log('EmergencyWithdrawn events detected:', logs);
-                logs.forEach(log => {
-                    console.log('Processing EmergencyWithdrawn log:', {
-                        user: log.args?.user,
-                        amount: log.args?.amount,
-                        penalty: log.args?.penalty,
-                        timestamp: log.args?.timestamp,
-                        currentUser: address,
-                        isForCurrentUser: log.args?.user?.toLowerCase() === address?.toLowerCase()
-                    });
-                    if (log.args?.user?.toLowerCase() === address?.toLowerCase()) {
-                        toast.warning(`Emergency withdrawal: ${log.args.amount} tokens (penalty: ${log.args.penalty})`);
-                    }
+        const handleWithdrawnEvent = (user, amount, timestamp, newTotalStaked, currentRewardRate, rewardsAccrued, event) => {
+            console.log('Withdrawn event received:', {
+                user,
+                amount: amount.toString(),
+                timestamp: timestamp.toString(),
+                newTotalStaked: newTotalStaked.toString(),
+                currentRewardRate: currentRewardRate.toString(),
+                rewardsAccrued: rewardsAccrued.toString(),
+                isCurrentUser: user.toLowerCase() === address.toLowerCase()
+            });
+
+            if (user.toLowerCase() === address.toLowerCase()) {
+                const formattedAmount = formatTokenAmount(amount.toString());
+                const formattedRewards = formatTokenAmount(rewardsAccrued.toString());
+                
+                setEventData(prev => {
+                    // Calculate new user staked amount (decreased by withdrawal)
+                    const currentUserStaked = prev.userStakedAmount ? 
+                        parseFloat(prev.userStakedAmount) : 0;
+                    const newUserStaked = Math.max(0, currentUserStaked - parseFloat(formattedAmount));
+                    
+                    return {
+                        ...prev,
+                        lastWithdrawEvent: {
+                            user,
+                            amount: formattedAmount,
+                            timestamp: new Date(Number(timestamp) * 1000),
+                            rewardsAccrued: formattedRewards,
+                            transactionHash: event.transactionHash
+                        },
+                        userStakedAmount: newUserStaked.toFixed(4),
+                        totalStaked: formatTokenAmount(newTotalStaked.toString()),
+                        currentRewardRate: currentRewardRate.toString(),
+                        lastUpdateTimestamp: Date.now()
+                    };
                 });
+                
+                toast.success(`Withdrawal confirmed: ${formattedAmount} STK tokens withdrawn (${formattedRewards} rewards accrued)`);
+                console.log('Updated user staked amount after withdrawal event');
             }
-        });
-        unwatchFunctions.push(unwatchEmergencyWithdrawn);
+        };
 
-        // Watch Approval events for token approvals
-        const unwatchApproval = publicClient.watchEvent({
-            address: stakingTokenConfig.address,
-            event: parseAbiItem('event Approval(address indexed owner, address indexed spender, uint256 value)'),
-            onLogs: logs => {
-                console.log('Approval events detected:', logs);
-                logs.forEach(log => {
-                    console.log('Processing Approval log:', {
-                        owner: log.args?.owner,
-                        spender: log.args?.spender,
-                        value: log.args?.value,
-                        currentUser: address,
-                        stakingContract: stakingContractConfig.address,
-                        isForCurrentUser: log.args?.owner?.toLowerCase() === address?.toLowerCase(),
-                        isForStakingContract: log.args?.spender?.toLowerCase() === stakingContractConfig.address?.toLowerCase()
-                    });
-                    if (log.args?.owner?.toLowerCase() === address?.toLowerCase() && 
-                        log.args?.spender?.toLowerCase() === stakingContractConfig.address?.toLowerCase()) {
-                        toast.success(`Token approval confirmed: ${log.args.value} tokens`);
-                    }
+        const handleRewardsClaimedEvent = (user, amount, timestamp, newPendingRewards, totalStaked, event) => {
+            console.log('RewardsClaimed event received:', {
+                user,
+                amount: amount.toString(),
+                timestamp: timestamp.toString(),
+                newPendingRewards: newPendingRewards.toString(),
+                totalStaked: totalStaked.toString(),
+                isCurrentUser: user.toLowerCase() === address.toLowerCase()
+            });
+
+            if (user.toLowerCase() === address.toLowerCase()) {
+                const formattedAmount = formatTokenAmount(amount.toString());
+                const formattedPendingRewards = formatTokenAmount(newPendingRewards.toString());
+                
+                setEventData(prev => ({
+                    ...prev,
+                    lastClaimEvent: {
+                        user,
+                        amount: formattedAmount,
+                        timestamp: new Date(Number(timestamp) * 1000),
+                        transactionHash: event.transactionHash
+                    },
+                    pendingRewards: formattedPendingRewards,
+                    lastUpdateTimestamp: Date.now()
+                }));
+                
+                toast.success(`Rewards claimed: ${formattedAmount} STK tokens`);
+                console.log('Updated pending rewards after claim event');
+            }
+        };
+
+        const handleEmergencyWithdrawnEvent = (user, amount, penalty, timestamp, newTotalStaked, event) => {
+            console.log('EmergencyWithdrawn event received:', {
+                user,
+                amount: amount.toString(),
+                penalty: penalty.toString(),
+                timestamp: timestamp.toString(),
+                newTotalStaked: newTotalStaked.toString(),
+                isCurrentUser: user.toLowerCase() === address.toLowerCase()
+            });
+
+            if (user.toLowerCase() === address.toLowerCase()) {
+                const formattedAmount = formatTokenAmount(amount.toString());
+                const formattedPenalty = formatTokenAmount(penalty.toString());
+                
+                setEventData(prev => {
+                    // Emergency withdraw removes all staked amount
+                    return {
+                        ...prev,
+                        lastEmergencyWithdrawEvent: {
+                            user,
+                            amount: formattedAmount,
+                            penalty: formattedPenalty,
+                            timestamp: new Date(Number(timestamp) * 1000),
+                            transactionHash: event.transactionHash
+                        },
+                        userStakedAmount: '0.0000', // Reset to 0 after emergency withdrawal
+                        totalStaked: formatTokenAmount(newTotalStaked.toString()),
+                        pendingRewards: '0.0000', // Also reset pending rewards
+                        lastUpdateTimestamp: Date.now()
+                    };
                 });
+                
+                toast.warning(`Emergency withdrawal: ${formattedAmount} STK tokens (penalty: ${formattedPenalty} STK)`);
+                console.log('Updated user staked amount to 0 after emergency withdrawal');
             }
-        });
-        unwatchFunctions.push(unwatchApproval);
+        };
 
-        console.log('Watching staking events, unwatch functions:', unwatchFunctions);
+        const handleApprovalEvent = (owner, spender, value, event) => {
+            console.log('Approval event received:', {
+                owner,
+                spender,
+                value: value.toString(),
+                isCurrentUser: owner.toLowerCase() === address.toLowerCase(),
+                isForStakingContract: spender.toLowerCase() === stakingContractConfig.address.toLowerCase()
+            });
+
+            if (owner.toLowerCase() === address.toLowerCase() && 
+                spender.toLowerCase() === stakingContractConfig.address.toLowerCase()) {
+                const formattedValue = formatTokenAmount(value.toString());
+                setEventData(prev => ({
+                    ...prev,
+                    lastApprovalEvent: {
+                        owner,
+                        spender,
+                        value: formattedValue,
+                        timestamp: new Date(),
+                        transactionHash: event.transactionHash
+                    }
+                }));
+                toast.success(`Token approval confirmed: ${formattedValue} STK tokens`);
+            }
+        };
+
+        // Attach event listeners
+        console.log('🎯 Attaching ethers event listeners...');
+        console.log('📍 Staking contract address:', stakingContractConfig.address);
+        console.log('📍 Token contract address:', stakingTokenConfig.address);
+        console.log('👤 Listening for user:', address);
+        
+        stakingContract.on('Staked', handleStakedEvent);
+        stakingContract.on('Withdrawn', handleWithdrawnEvent);
+        stakingContract.on('RewardsClaimed', handleRewardsClaimedEvent);
+        stakingContract.on('EmergencyWithdrawn', handleEmergencyWithdrawnEvent);
+        tokenContract.on('Approval', handleApprovalEvent);
+        
+        console.log('✅ Event listeners attached successfully');
+
+        // Test that events can be detected
+        stakingContract.queryFilter('Staked', -10).then(events => {
+            console.log('📊 Recent Staked events (last 10 blocks):', events.length);
+        }).catch(err => console.log('No recent events found or error:', err));
 
         // Cleanup function
         return () => {
-            unwatchFunctions.forEach(unwatch => {
-                if (typeof unwatch === 'function') {
-                    unwatch();
-                }
-            });
-            console.log('Stopped watching staking events');
+            console.log('Cleaning up ethers event listeners...');
+            stakingContract.off('Staked', handleStakedEvent);
+            stakingContract.off('Withdrawn', handleWithdrawnEvent);
+            stakingContract.off('RewardsClaimed', handleRewardsClaimedEvent);
+            stakingContract.off('EmergencyWithdrawn', handleEmergencyWithdrawnEvent);
+            tokenContract.off('Approval', handleApprovalEvent);
+            console.log('Event listeners cleaned up successfully');
         };
     }, [publicClient, address]);
 
     // Check token allowance
     const checkAllowance = useCallback(async (amount) => {
-        console.log('checkAllowance function called with amount:', amount);
         if (!address || !publicClient) {
-            console.log('Cannot check allowance: missing address or publicClient');
             return false;
         }
         
         try {
-            console.log('Reading allowance from contract...');
             const allowance = await publicClient.readContract({
                 ...stakingTokenConfig,
                 functionName: "allowance",
@@ -171,15 +324,6 @@ export const useStaking = () => {
             
             const requiredAmount = parseTokenAmount(amount);
             const hasEnoughAllowance = allowance >= requiredAmount;
-            
-            console.log('Allowance check results:', {
-                currentAllowance: allowance.toString(),
-                requiredAmount: requiredAmount.toString(),
-                formattedAmount: amount,
-                hasEnoughAllowance,
-                userAddress: address,
-                spenderAddress: stakingContractConfig.address
-            });
             
             return hasEnoughAllowance;
         } catch (error) {
@@ -190,7 +334,6 @@ export const useStaking = () => {
 
     // Approve tokens
     const approveTokens = useCallback(async (amount) => {
-        console.log('approveTokens function called with amount:', amount);
         if (!address) {
             toast.error("Please connect your wallet first");
             throw new Error("Wallet not connected");
@@ -199,24 +342,14 @@ export const useStaking = () => {
         try {
             setIsApproving(true);
             toast.loading("Approving tokens...", { id: "approve" });
-            console.log('Sending approve transaction...');
-            console.log('Approval details:', {
-                spender: stakingContractConfig.address,
-                amount: parseTokenAmount(amount),
-                formattedAmount: amount
-            });
             
             const hash = await writeContractAsync({
                 ...stakingTokenConfig,
                 functionName: "approve",
                 args: [stakingContractConfig.address, parseTokenAmount(amount)],
             });
-
-            console.log('Approval transaction hash:', hash);
-            console.log('Waiting for approval transaction receipt...');
             
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            console.log('Approval transaction receipt:', receipt);
             
             if (receipt.status === "reverted") {
                 toast.error("Token approval failed - transaction reverted", { id: "approve" });
@@ -224,7 +357,6 @@ export const useStaking = () => {
             }
 
             toast.success("Tokens approved successfully!", { id: "approve" });
-            console.log('Token approval completed successfully');
             return { success: true, hash };
         } catch (error) {
             console.error("Approval failed:", error);
@@ -237,7 +369,6 @@ export const useStaking = () => {
 
     // Stake tokens
     const stake = useCallback(async (amount) => {
-        console.log('stake function called with amount:', amount);
         if (!address) {
             toast.error("Please connect your wallet first");
             throw new Error("Wallet not connected");
@@ -251,24 +382,14 @@ export const useStaking = () => {
         try {
             setIsStaking(true);
             toast.loading("Processing stake transaction...", { id: "stake" });
-            console.log('Checking allowance before staking...');
 
             // Check if approval is needed
             const hasAllowance = await checkAllowance(amount);
-            console.log('Allowance check result:', hasAllowance);
             
             if (!hasAllowance) {
-                console.log('Approval needed, approving tokens first...');
                 toast.loading("Approving tokens first...", { id: "stake" });
                 await approveTokens(amount);
             }
-
-            console.log('Sending stake transaction...');
-            console.log('Stake details:', {
-                amount: parseTokenAmount(amount),
-                formattedAmount: amount,
-                userAddress: address
-            });
             
             toast.loading("Staking tokens...", { id: "stake" });
             const hash = await writeContractAsync({
@@ -277,12 +398,8 @@ export const useStaking = () => {
                 args: [parseTokenAmount(amount)],
             });
 
-            console.log('Stake transaction hash:', hash);
-            console.log('Waiting for stake transaction receipt...');
-
             // Wait for transaction to be mined
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            console.log('Stake transaction receipt:', receipt);
             
             if (receipt.status === "reverted") {
                 toast.error("Stake transaction failed - transaction reverted", { id: "stake" });
@@ -290,7 +407,6 @@ export const useStaking = () => {
             }
             
             toast.success(`Successfully staked ${amount} STK tokens!`, { id: "stake" });
-            console.log('Stake completed successfully');
             return { success: true, hash };
         } catch (error) {
             console.error("Staking failed:", error);
@@ -303,7 +419,6 @@ export const useStaking = () => {
 
     // Withdraw tokens
     const withdraw = useCallback(async (amount) => {
-        console.log('withdraw function called with amount:', amount);
         if (!address) {
             toast.error("Please connect your wallet first");
             throw new Error("Wallet not connected");
@@ -317,12 +432,6 @@ export const useStaking = () => {
         try {
             setIsWithdrawing(true);
             toast.loading("Processing withdrawal...", { id: "withdraw" });
-            console.log('Sending withdraw transaction...');
-            console.log('Withdraw details:', {
-                amount: parseTokenAmount(amount),
-                formattedAmount: amount,
-                userAddress: address
-            });
             
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
@@ -330,11 +439,7 @@ export const useStaking = () => {
                 args: [parseTokenAmount(amount)],
             });
             
-            console.log('Withdraw transaction hash:', hash);
-            console.log('Waiting for withdraw transaction receipt...');
-            
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            console.log('Withdraw transaction receipt:', receipt);
             
             if (receipt.status === "reverted") {
                 toast.error("Withdrawal failed - transaction reverted", { id: "withdraw" });
@@ -342,7 +447,6 @@ export const useStaking = () => {
             }
             
             toast.success(`Successfully withdrew ${amount} STK tokens!`, { id: "withdraw" });
-            console.log('Withdrawal completed successfully');
             return { success: true, hash };
         } catch (error) {
             console.error("Withdrawal failed:", error);
@@ -355,7 +459,6 @@ export const useStaking = () => {
 
     // Claim rewards
     const claimRewards = useCallback(async () => {
-        console.log('claimRewards function called');
         if (!address) {
             toast.error("Please connect your wallet first");
             throw new Error("Wallet not connected");
@@ -364,18 +467,13 @@ export const useStaking = () => {
         try {
             setIsClaiming(true);
             toast.loading("Claiming your rewards...", { id: "claim" });
-            console.log('Sending claimRewards transaction...');
             
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
                 functionName: "claimRewards",
             });
             
-            console.log('Transaction hash:', hash);
-            console.log('Waiting for transaction receipt...');
-            
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            console.log('Transaction receipt:', receipt);
             
             if (receipt.status === "reverted") {
                 toast.error("Claim rewards failed - transaction reverted", { id: "claim" });
@@ -383,7 +481,6 @@ export const useStaking = () => {
             }
             
             toast.success("Rewards claimed successfully!", { id: "claim" });
-            console.log('Claim rewards completed successfully');
             return { success: true, hash };
         } catch (error) {
             console.error("Claim rewards failed:", error);
@@ -396,7 +493,6 @@ export const useStaking = () => {
 
     // Emergency withdraw
     const emergencyWithdraw = useCallback(async () => {
-        console.log('emergencyWithdraw function called');
         if (!address) {
             toast.error("Please connect your wallet first");
             throw new Error("Wallet not connected");
@@ -405,22 +501,13 @@ export const useStaking = () => {
         try {
             setIsEmergencyWithdrawing(true);
             toast.loading("Processing emergency withdrawal...", { id: "emergency" });
-            console.log('Sending emergency withdraw transaction...');
-            console.log('Emergency withdraw details:', {
-                userAddress: address,
-                warning: 'This action will incur a penalty'
-            });
             
             const hash = await writeContractAsync({
                 ...stakingContractConfig,
                 functionName: "emergencyWithdraw",
             });
             
-            console.log('Emergency withdraw transaction hash:', hash);
-            console.log('Waiting for emergency withdraw transaction receipt...');
-            
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            console.log('Emergency withdraw transaction receipt:', receipt);
             
             if (receipt.status === "reverted") {
                 toast.error("Emergency withdrawal failed - transaction reverted", { id: "emergency" });
@@ -428,7 +515,6 @@ export const useStaking = () => {
             }
             
             toast.success("Emergency withdrawal completed (penalty applied)", { id: "emergency" });
-            console.log('Emergency withdrawal completed successfully');
             return { success: true, hash };
         } catch (error) {
             console.error("Emergency withdrawal failed:", error);
@@ -451,6 +537,8 @@ export const useStaking = () => {
         isClaiming,
         isApproving,
         isEmergencyWithdrawing,
+        eventData,
+        eventUpdateCount, // For debugging
     };
 };
 
