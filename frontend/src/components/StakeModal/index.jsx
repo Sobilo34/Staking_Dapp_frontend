@@ -60,6 +60,7 @@ export default function StakeModal({ isOpen, onClose, onSuccess }) {
     try {
       const result = await stake(amount);
       if (result.success) {
+        console.log('Stake transaction successful:', result);
         setAmount('');
         onSuccess?.();
         onClose();
